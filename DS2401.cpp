@@ -22,112 +22,49 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#define DEBUG
-
 #include "DS2401.h"
 
-DS2401::DS2401(OneWire* _oneWire)
-{
-	_wire = _oneWire;
-	_crcValid = false;
-	_ds2401Present = false;
-	_GotData = false;
+/*
+The DS2401 returns 64 bits (8 bytes) of data:
+8 bit family code
+48 bit serial number
+8 bit CRC
+*/
+
+DS2401::DS2401(OneWire* _oneWire) {
+  _wire = _oneWire;
+  _readSuccess = false;
 }
 
-bool DS2401::init()
-{
-	if (_wire->reset())
-	{
-		GetData();
-		return true;
-	}
-	else
-	{
-		return false;
-	} 
+uint8_t DS2401::init() {
+  if (_wire->reset()) {
+    _wire->write(DS2401_READ_ROM_COMMAND);
+    for (uint8_t i = 0; i < 8; i++) {                       // Read 8 bytes of data.
+      _data[i] = _wire->read();
+    }
+    if (_data[0] == DS2401_FAMILY_CODE) {                   // Check the device family code.
+      uint8_t crcCalc = _wire->crc8(_data, 7);              // Calculate CRC.
+      if (crcCalc == _data[7]) {                            // Check the CRC.
+        _readSuccess = DS2401_SUCCESS;                      // All checked out; data read successfully.
+      }
+      else {
+        _readSuccess = DS2401_CRC_FAIL;
+      }
+    }
+    else {
+      _readSuccess = DS2401_NOT_DS2401;
+    }
+  }
+  else {
+    _readSuccess = DS2401_NO_WIRE;
+  }
+  return _readSuccess;
 }
 
-bool DS2401::isDS2401()
-{
-	return _ds2401Present;
-}
-
-String DS2401::GetSerial()
-{
-	IsCRCValid();
-
-	if (!_crcValid)
-	{
-		return String("CRC Not Valid!!!");
-	}
-
-	if (!_ds2401Present || !_GotData)
-	{
-		return String("No DS2401 Present on Bus");
-	}
-
-
-	String returnString;
-
-	for (byte i = 1; i < 6; i++)
-	{
-		returnString += String(_data[i], DEC);
-
-	}
-
-	return returnString;
-}
-
-void DS2401::Refresh()
-{
-	if (_wire->reset())
-	{
-		GetData();
-	}
-	else
-	{
-		_GotData = false;
-	}
-}
-
-void DS2401::GetData()
-{
-
-	_wire->write(DS2401_READ_ROM_COMMAND);
-
-	for (i = 0; i <= 7; i++)
-	{
-		_data[i] = _wire->read();
-	}
-
-	DS2401Present();
-	_GotData = true;
-
-}
-
-void DS2401::IsCRCValid()
-{
-
-	byte crcCalc = _wire->crc8(_data, 7);
-
-	if (crcCalc != _data[7])
-	{
-		_crcValid = false;
-	}
-	else
-	{
-		_crcValid = true;
-	}
-}
-
-void DS2401::DS2401Present()
-{
-	if (_data[0] == DS2401_FAMILY_CODE)
-	{
-		_ds2401Present = true;
-	}
-	else
-	{
-		_ds2401Present = false;
-	}
+void DS2401::getSerialNumber(uint8_t *serialNumber) {
+  if (_readSuccess == DS2401_SUCCESS) {
+    for (uint8_t i = 0; i < 5; i++) {
+      serialNumber[i] = _data[i+1];
+    }
+  }
 }

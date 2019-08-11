@@ -22,49 +22,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
 #ifndef _DS2401_h
 #define _DS2401_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
-	#include "Arduino.h"
+  #include "Arduino.h"
 #else
-	#include "WProgram.h"
+  #include "WProgram.h"
 #endif
 
 #include <OneWire.h>
 
-class DS2401
-{
+#define DS2401_READ_ROM_COMMAND   0x33
+#define DS2401_FAMILY_CODE        0x01
+
+#define DS2401_SUCCESS            0 
+#define DS2401_CRC_FAIL           1
+#define DS2401_NOT_DS2401         2
+#define DS2401_NO_WIRE            3
+
+class DS2401 {
 public:
-	DS2401(OneWire* _oneWire);
-	bool init();
-	bool isDS2401();
-	String GetSerial();
-	void Refresh();
+  DS2401(OneWire* _oneWire);
+  uint8_t init();
+  void getSerialNumber(uint8_t*);
 
 private:
-	OneWire* _wire;
-	void GetData();
-	void IsCRCValid();
-	void DS2401Present();
-	
-	byte i;
-	byte _data[8];
-	byte _crcByte;
-	byte _crcCalc;
-	bool _crcValid;
-	bool _ds2401Present;
-	bool _GotData;
+  OneWire* _wire;
+  void GetData();
+  void IsCRCValid();
+  void DS2401Present();
 
-protected:
-
-
+  uint8_t _data[8];
+  uint8_t _readSuccess;
 };
-
-
-#define DS2401_READ_ROM_COMMAND		0x33
-#define DS2401_FAMILY_CODE			0x01
-
 #endif
-
